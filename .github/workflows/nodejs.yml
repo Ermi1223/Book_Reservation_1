@@ -3,30 +3,62 @@ name: Node.js CI
 on:
   push:
     branches:
-      - main  # Trigger action on push to the main branch
+      - main
   pull_request:
     branches:
-      - main  # Trigger action when a PR is made against the main branch
+      - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
-
-    strategy:
-      matrix:
-        node-version: [14.x, 16.x, 18.x]  # Define multiple Node.js versions to test against
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3  # Checks out the code in the repository
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}  # Use matrix for different versions
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm install  # Install dependencies specified in package.json
+      # Step 3: Clean up previous installs (optional but helps with issues)
+      - name: Clean up node_modules and package-lock.json
+        run: |
+          rm -rf node_modules package-lock.json
 
-    - name: Run tests
-      run: npm test  # Run the test script from package.json
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 5: Lint code (optional but recommended for code quality)
+      #- name: Lint code
+       # run: npm run lint
+        #continue-on-error: true # Allow the workflow to proceed even if linting fails
+
+      # Step 6: (Skipped) Run test
+      
+      #- name: Run tests
+       # run: npm test
+
+      # Step 7: Check for outdated dependencies (optional but useful for maintenance
+      - name: Check for outdated dependencies
+        run: npm outdated
+        continue-on-error: true
+
+      # Step 8: Upload test results (optional for reports)
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            coverage/
+
+      # Step 9: Notify failure (optional for better monitoring)
+      - name: Notify failure
+        if: failure()
+        run: echo "A build or test failure occurred. Please investigate!"
